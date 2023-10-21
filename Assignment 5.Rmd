@@ -1,0 +1,110 @@
+---
+title: "HW5"
+author: "Donovan Kott"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r data}
+data2 <- read.csv("C:/Users/dmkot/Downloads/Unemployment in America Per US State.csv")
+str(data2)
+data3 = data2[data2$State.Area == "New Jersey",]
+head(data3)
+```
+
+```{r ts}
+myts = ts(data3$Percent.....of.Labor.Force.Unemployed.in.State.Area, start=c(1976,1), end=c(2022,12), frequency=12)
+plot(myts, ylab="Unemployment Rate %")
+```
+
+
+
+```{r lib}
+library(fpp)
+library(fpp2)
+```
+
+
+
+We can see from decomposition plot that there is very minimal to no seasonal component in this data set as the range is only from -.1 to .1. We can that the trend component has heavy impact because at each peak on the curve the trend value is higher than the time series value.  
+```{r plot1}
+
+stl_decomp <- stl(myts,s.window ="periodic")
+plot(stl_decomp)
+attributes(stl_decomp)
+```
+
+
+Even looking at the printed out seasonally adjusted data you can see the true values are not that far off from the seasonally adjusted values. It begs the question that Unemployment data is already seasonally adjusted or not?
+```{r seas}
+# Lets print out a seasonal adjustment
+seasadj(stl_decomp)
+myts
+```
+
+
+
+Once again you see the same thing. The seasonally adjusted data is plotted alongside the time series and the black (ts) and red (seasonally adjusted) lines are almost exactly the same. If the time series data wasn't already seasonally adjusted you would see a greater difference between the red and black lines.
+```{r}
+# Plot a line on the graph
+plot(myts)
+lines(seasadj(stl_decomp), col="Red")
+```
+
+
+
+The RMSE is .532. The Acf plot of the residuals shows a spike at Lag 1 and Lag 5. The autocorrelation is not particularly large here and at Lag 5 it is unlikely to have a heavy impact on the forecasts or prediction intervals. 
+```{r stl}
+# you can pass the # of period
+f_stl <- forecast(stl_decomp,h=48)
+f_stl
+f_stl$method
+accuracy(f_stl)
+Acf(f_stl$residuals)
+```
+
+
+
+I can see the forecast for the next 48 months since that is the parameter I set for "h". The forecast is very steady but the confidence interval shows it has a wide range to go up or down. 
+```{r stlplot}
+plot(f_stl)
+```
+
+```{r decompmyts}
+# There is more than one way to do things
+decomp_myts <- decompose(myts)
+```
+
+
+
+Our data is an Additive time series meaning this model works best when the time series being analyzed has roughly the same variability throughout the length of the series. The value of the time series falls usually within a band of constant width centered around a trend and is represented as the sum of components. 
+
+This is just another way of decomposing and shows similar points as the plot earlier in this paper.
+```{r decompmytsplotm}
+plot(decomp_myts)
+```
+
+We can use the "type" name to confirm its an Additive model. 
+```{r decompx}
+# Each one shows different attributes 
+attributes(decomp_myts)
+decomp_myts$figure
+decomp_myts$type
+seasadj(decomp_myts)
+x=forecast(seasadj(decomp_myts))
+```
+
+Here we can see a forecast plot of decomposed time series that is seasonally adjusted, 
+```{r plotx}
+plot(x)
+```
